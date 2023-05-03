@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
+import matplotlib.pyplot as plt
 
+st.set_page_config(layout="wide")
 
 def to_excel(data_frame):
     output = BytesIO()
@@ -55,7 +57,8 @@ if uploaded_file is not None:
 
     for main_value in main_values_list:
         if main_value in value_dictionary.keys():
-            new_df.loc[len(new_df.index)] = [main_value, value_dictionary[main_value]["value 1"],
+            new_df.loc[len(new_df.index)] = [main_value,
+                                             value_dictionary[main_value]["value 1"],
                                              value_dictionary[main_value]["value 2"],
                                              value_dictionary[main_value]["value 3"],
                                              value_dictionary[main_value]["value 4"],
@@ -72,3 +75,58 @@ if uploaded_file is not None:
                 data=to_excel(new_df),
                 file_name='result.xlsx'
             )
+
+
+def create_graphs(answers, percents=True):
+    df_q_5_1 = pd.DataFrame()
+    df_q_5_1["Vecums"] = df_anketa["1) Jūsu vecums"]
+
+    one_hot = pd.get_dummies(
+        df_anketa[answers])
+    df_q_5_1 = df_q_5_1.join(one_hot)
+
+    st.title(answers)
+
+    grouped_data = df_q_5_1.groupby("Vecums").sum()
+
+    if not percents:
+        st.subheader("Vērtibas gabalos")
+        st.dataframe(grouped_data)
+
+        st.line_chart(df_q_5_1.groupby("Vecums").sum())
+        st.bar_chart(df_q_5_1.groupby("Vecums").sum())
+
+    if percents:
+        col_sum = grouped_data.sum(axis=1)
+        df_percent = grouped_data.apply(lambda x: x / col_sum * 100, axis=0)
+
+        st.subheader("Vērtibas procentos")
+        st.dataframe(df_percent)
+
+        st.line_chart(df_percent.groupby("Vecums").sum())
+        st.bar_chart(df_percent.groupby("Vecums").sum())
+
+
+with st.expander("ANKETA"):
+    uploaded_anketa = st.file_uploader("Ieliec exceli", type=["csv", "xlsx"])
+
+    values_for_tables = st.radio(
+        "Vērtības procentos vai gabalos",
+        ('Procentos', 'Gabalos'))
+
+    df_anketa = pd.DataFrame()
+
+    if uploaded_anketa is not None:
+        print("bbb")
+        if uploaded_anketa.type == "text/csv":
+            df_anketa = pd.read_excel(uploaded_anketa, sheet_name="main")
+        else:
+            df_anketa = pd.read_excel(uploaded_anketa, sheet_name="main")
+
+        values_for_tables_bool = True
+        if values_for_tables == "Gabalos":
+            values_for_tables_bool = False
+
+        for current_answer in df_anketa.columns[2:]:
+            create_graphs(answers=current_answer,
+                          percents=values_for_tables_bool)
