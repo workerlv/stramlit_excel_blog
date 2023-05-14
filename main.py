@@ -4,6 +4,7 @@ from io import BytesIO
 
 st.set_page_config(layout="wide")
 
+
 def to_excel(data_frame):
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
@@ -76,7 +77,7 @@ if uploaded_file is not None:
             )
 
 
-def create_graphs(answers, percents=True):
+def create_graphs(answers, just_tables, percents=True):
     df_q_5_1 = pd.DataFrame()
     df_q_5_1["Vecums"] = df_anketa["1) Jūsu vecums"]
 
@@ -84,7 +85,7 @@ def create_graphs(answers, percents=True):
         df_anketa[answers])
     df_q_5_1 = df_q_5_1.join(one_hot)
 
-    st.title(answers)
+    st.subheader(answers)
 
     grouped_data = df_q_5_1.groupby("Vecums").sum()
 
@@ -92,18 +93,21 @@ def create_graphs(answers, percents=True):
         st.subheader("Vērtibas gabalos")
         st.dataframe(grouped_data)
 
-        st.line_chart(df_q_5_1.groupby("Vecums").sum())
-        st.bar_chart(df_q_5_1.groupby("Vecums").sum())
+        if not just_tables:
+            st.line_chart(df_q_5_1.groupby("Vecums").sum())
+            st.bar_chart(df_q_5_1.groupby("Vecums").sum())
 
     if percents:
         col_sum = grouped_data.sum(axis=1)
         df_percent = grouped_data.apply(lambda x: x / col_sum * 100, axis=0)
 
         st.subheader("Vērtibas procentos")
-        st.dataframe(df_percent)
 
-        st.line_chart(df_percent.groupby("Vecums").sum())
-        st.bar_chart(df_percent.groupby("Vecums").sum())
+        st.dataframe(df_percent)
+        if not just_tables:
+            st.line_chart(df_percent.groupby("Vecums").sum())
+            st.bar_chart(df_percent.groupby("Vecums").sum())
+            st.bar_chart(df_percent.groupby("Vecums").sum())
 
 
 with st.expander("ANKETA"):
@@ -113,10 +117,10 @@ with st.expander("ANKETA"):
         "Vērtības procentos vai gabalos",
         ('Procentos', 'Gabalos'))
 
+    just_table = st.checkbox("Tikai tabulas")
     df_anketa = pd.DataFrame()
 
     if uploaded_anketa is not None:
-        print("bbb")
         if uploaded_anketa.type == "text/csv":
             df_anketa = pd.read_excel(uploaded_anketa, sheet_name="main")
         else:
@@ -128,4 +132,7 @@ with st.expander("ANKETA"):
 
         for current_answer in df_anketa.columns[2:]:
             create_graphs(answers=current_answer,
+                          just_tables=just_table,
                           percents=values_for_tables_bool)
+
+
